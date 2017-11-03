@@ -151,26 +151,37 @@ let useUserMove = (moveName) => {
     let textString = "You used {movename}! {effectv}",
         textStringDmg = "It did {dmg} damage, leaving me with {hp}HP!";
     return battle.getUserAllowedMoves()
-    .then((types) => {
-        return api.getAttackMultiplier(moveData.type, types[0], types[1])
-        .then((multiplier) => {
-            let totalDamage = Math.ciel((moveData.power / 5) * multiplier)
-            return battle.doDamageToNpc(totalDamage)
-            .then((hpRemaining) => {
-                if (parseInt(hpRemaining, 10) <= 0) {
-                    return battle.endBattle()
-                    .then(() => {
-                        return "You Beat Me!";
-                    })
-                }
-                textString = textString.replace("{effectv}", effectivenessMessage(multiplier));
-                textStringDmg = textStringDmg.replace("{dmg}", totalDamage);
-                textStringDmg = textStringDmg.replace("{hp}", hpRemaining);
-                if (multiplier == 0)
-                    return textString;
-                return textString + textStringDmg;
-            })
-        });
+    .then((moves) => {
+        if(moves.indexOf(moveName) !== -1) {
+            return battle.getSingleMove(moveName);
+        } else {
+            throw new Error("Your pokemon doesn't know that move");
+        }
+    })
+    .then((moveData) => {
+        textString = textString.replace("{movename}", moveName);
+        return battle.getNpcPokemonTypes()
+        .then((types) => {
+            return api.getAttackMultiplier(moveData.type, types[0], types[1])
+            .then((multiplier) => {
+                let totalDamage = Math.ciel((moveData.power / 5) * multiplier)
+                return battle.doDamageToNpc(totalDamage)
+                .then((hpRemaining) => {
+                    if (parseInt(hpRemaining, 10) <= 0) {
+                        return battle.endBattle()
+                        .then(() => {
+                            return "You Beat Me!";
+                        })
+                    }
+                    textString = textString.replace("{effectv}", effectivenessMessage(multiplier));
+                    textStringDmg = textStringDmg.replace("{dmg}", totalDamage);
+                    textStringDmg = textStringDmg.replace("{hp}", hpRemaining);
+                    if (multiplier == 0)
+                        return textString;
+                    return textString + textStringDmg;
+                })
+            });
+        })
     })
 }
 
