@@ -106,4 +106,72 @@ module.exports.userChoosePokemon = (commandArray) => {
         }          
 }
 
+module.exports.startBattle = (discordData) => {
+    let textString = "OK {name}, I'll battle you! ".replace("{name}", discordData.user_name),
+        dex_np = Math.ciel(Math.random() * 151);
+    return battle.newBattle(discordData.user_name, discordData.channel_name)
+    .then(() => {
+        return module.exports.npcChoosePokemon(dex_no);
+    })
+    .then((pokemonChoice) => {
+        return {
+            text: textString + '\n' + pokemonChoice.text,
+            spriteURL: pokemonChoice.spriteURL
+        }
+    })
+}
+
+module.exports.endBattle = () => {
+    return battle.endBattle();
+}
+
+let effectivenessMessage = (mult) => {
+    switch(mult) {
+        case 0:
+            return "It doesn't have an effect. ";
+            break;
+        case 0.5:
+        case 0.25:
+            return "It's not very effective... ";
+            break;
+        case 1:
+            return " ";
+            break;
+        case 2:
+        case 4:
+            return "It's super effective! ";
+            break;
+        default:
+            return " ";
+            break;
+    }
+}
+
+let useUserMove = (moveName) => {
+    let textString = "You used {movename}! {effectv}",
+        textStringDmg = "It did {dmg} damage, leaving me with {hp}HP!";
+    return battle.getUserAllowedMoves()
+    .then((types) => {
+        return api.getAttackMultiplier(moveData.type, types[0], types[1])
+        .then((multiplier) => {
+            let totalDamage = Math.ciel((moveData.power / 5) * multiplier)
+            return battle.doDamageToNpc(totalDamage)
+            .then((hpRemaining) => {
+                if (parseInt(hpRemaining, 10) <= 0) {
+                    return battle.endBattle()
+                    .then(() => {
+                        return "You Beat Me!";
+                    })
+                }
+                textString = textString.replace("{effectv}", effectivenessMessage(multiplier));
+                textStringDmg = textStringDmg.replace("{dmg}", totalDamage);
+                textStringDmg = textStringDmg.replace("{hp}", hpRemaining);
+                if (multiplier == 0)
+                    return textString;
+                return textString + textStringDmg;
+            })
+        });
+    })
+}
+
 
